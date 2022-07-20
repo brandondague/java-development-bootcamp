@@ -1,6 +1,8 @@
 package src.main.model;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import src.main.model.account.Account;
 
@@ -15,16 +17,20 @@ public class Bank {
         this.transactions = new ArrayList<Transaction>(transactions);
     }
 
-    /**
-     * Name: addAccount
-     * @param account (Account)
-     * 
-     * Inside the function:
-     *   1. adds an account to the accounts ArrayList
-     */
-
-     public void addAccount(Account account) {
+    public void addAccount(Account account) {
         this.accounts.add(account.clone());
-     }
+    }
+
+    public void addTransaction(Transaction transaction) {
+        this.transactions.add(new Transaction(transaction));
+    }
+
+    public Transaction[] getTransactions(String accountId) {
+        List<Transaction> list = this.transactions.stream()
+                                                  .filter((transaction) -> transaction.getId().equals(accountId))
+                                                  .collect(Collectors.toList());
+
+        return list.toArray(new Transaction[list.size()]);
+    }
 
 }
