@@ -1,5 +1,10 @@
 package src.main;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 import src.main.model.account.Account;
@@ -16,37 +21,83 @@ public class Main {
    static Bank bank;
 
     public static void main(String[] args) {
+        try {
+            ArrayList<Account> accounts = returnAccounts();
+            loadAccounts(accounts);
 
-        bank = new Bank();
+            ArrayList<Transaction> transactions = returnTransactions();
+            runTransactions(transactions);
+            bank.deductTaxes();
+            for (Account account : accounts) {
+                System.out.println("\n\t\t\t\t\t ACCOUNT\n\n\t"+account+"\n\n");
+                transactionHistory(account.getId());
+            }
+            
+         } catch (FileNotFoundException e) {
+            System.out.println(e.getMessage());
+        }
 
-        Account[] accounts = new Account[] {
-            new Chequing("f84c43f4-a634-4c57-a644-7602f8840870", "Michael Scott", 1524.51),
-            new Savings("ce07d7b3-9038-43db-83ae-77fd9c0450c9", "Saul Goodman", 2241.60)
-        };
+    }
 
+    public static Account createObject(String[] values) {
+        try {
+            return (Account)Class.forName("src.main.model.account." + values[0])
+            .getConstructor(String.class, String.class, double.class)
+            .newInstance(values[1], values[2], Double.parseDouble(values[3]));    
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
+
+    public static void loadAccounts(ArrayList<Account> accounts) {
         for (Account account : accounts) {
             bank.addAccount(account);
         }
+    }
 
-        Transaction[] transactions = new Transaction[] {
-            new Transaction(Transaction.Type.WITHDRAW, 1546905600, "f84c43f4-a634-4c57-a644-7602f8840870", 624.99),
-            new Transaction(Transaction.Type.DEPOSIT, 1578700800, "f84c43f4-a634-4c57-a644-7602f8840870", 441.93),
-            new Transaction(Transaction.Type.WITHDRAW, 1547078400, "f84c43f4-a634-4c57-a644-7602f8840870", 546.72),
-            new Transaction(Transaction.Type.WITHDRAW, 1546732800, "f84c43f4-a634-4c57-a644-7602f8840870", 546.72),
-            new Transaction(Transaction.Type.DEPOSIT, 1578355200, "f84c43f4-a634-4c57-a644-7602f8840870", 635.95),
-            new Transaction(Transaction.Type.WITHDRAW, 1547078400, "ce07d7b3-9038-43db-83ae-77fd9c0450c9", 875.64),
-            new Transaction(Transaction.Type.WITHDRAW, 1578614400, "ce07d7b3-9038-43db-83ae-77fd9c0450c9", 912.45),
-            new Transaction(Transaction.Type.WITHDRAW, 1577836800, "ce07d7b3-9038-43db-83ae-77fd9c0450c9", 695.09),
-            new Transaction(Transaction.Type.WITHDRAW, 1609459200, "ce07d7b3-9038-43db-83ae-77fd9c0450c9", 917.21),
-            new Transaction(Transaction.Type.WITHDRAW, 1578096000, "ce07d7b3-9038-43db-83ae-77fd9c0450c9", 127.94),
-            new Transaction(Transaction.Type.WITHDRAW, 1546819200, "ce07d7b3-9038-43db-83ae-77fd9c0450c9", 612.52),
-        };
+    public static ArrayList<Account> returnAccounts() throws FileNotFoundException {
+        FileInputStream fis = new FileInputStream(ACCOUNTS_FILE);
+        Scanner scan = new Scanner(fis);
 
-        for(Transaction transaction : transactions) {
-            bank.addTransaction(transaction);
+        ArrayList<Account> accounts = new ArrayList<Account>();
+
+        while (scan.hasNextLine()) {
+            accounts.add(createObject(scan.nextLine().split(",")));
+        }
+        scan.close();
+        return accounts;
+    }
+
+    public static ArrayList<Transaction> returnTransactions() throws FileNotFoundException {
+        FileInputStream fis = new FileInputStream(TRANSACTIONS_FILE);
+        Scanner scan = new Scanner(fis);
+
+        ArrayList<Transaction> transactions = new ArrayList<Transaction>();
+        while (scan.hasNextLine()) {
+            String[] values = scan.nextLine().split(",");
+            transactions.add(new Transaction(Transaction.Type.valueOf(values[1]), Long.parseLong(values[0]), values[2], Double.parseDouble(values[3])));
         }
 
-        Transaction[] filteredTransactions = bank.getTransactions("f84c43f4-a634-4c57-a644-7602f8840870");
+        scan.close();
+        Collections.sort(transactions);
+        return transactions;
+    }
+
+    public static void runTransactions(ArrayList<Transaction> transactions) {
+        for (Transaction transaction : transactions) {
+            bank.executeTransaction(transaction);
+        }
+    }
+
+    public static void transactionHistory(String id) {
+        System.out.println("\t\t\t\t   TRANSACTION HISTORY\n\t");
+        for (Transaction transaction : bank.getTransactions(id)) {
+            wait(300);
+            System.out.println("\t"+transaction+"\n");
+        }
+        System.out.println("\n\t\t\t\t\tAFTER TAX\n");
+        System.out.println("\t" + bank.getAccount(id) +"\n\n\n\n");
     }
 
     /**
